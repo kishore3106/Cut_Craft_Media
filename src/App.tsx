@@ -288,6 +288,7 @@ const VideoProjectCard = ({ project }: ProjectCardProps) => {
             loop
             muted={isMuted}
             playsInline
+            preload="auto"
             className="w-full h-full object-cover transition-transform duration-1000 ease-[0.22,1,0.36,1] group-hover:scale-105"
           />
         </motion.div>
@@ -345,6 +346,7 @@ const VideoProjectCard = ({ project }: ProjectCardProps) => {
                     autoPlay
                     loop
                     playsInline
+                    preload="auto"
                     className="w-full h-full object-contain md:object-cover"
                   />
                 </div>
@@ -523,6 +525,7 @@ const VideoCarousel = () => {
                   muted={!isActive || isMuted} 
                   loop 
                   playsInline 
+                  preload={isActive ? "auto" : "metadata"}
                   className={`w-full h-full ${video.format === 'horizontal' ? 'object-contain bg-black' : 'object-cover'}`}
                 />
                 
