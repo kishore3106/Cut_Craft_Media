@@ -3,7 +3,7 @@ import { ArrowLeft, Mail, Phone, MapPin, ExternalLink, Award, Briefcase, Cpu, Ta
 import { Link } from "react-router-dom";
 import { useEffect, useRef } from "react";
 
-const BlendedBackgroundImage = ({ src, position = "left", theme = "light", contrast }: { src: string, position?: "left" | "right" | "bottom" | "top" | "center", theme?: "light" | "dark", contrast?: string }) => {
+const BlendedBackgroundImage = ({ src, position = "left", theme = "light", contrast, priority = false }: { src: string, position?: "left" | "right" | "bottom" | "top" | "center", theme?: "light" | "dark", contrast?: string, priority?: boolean }) => {
   const isDark = theme === "dark";
   
   let positionClasses = "top-0 left-0 w-full md:w-[60%] h-full";
@@ -70,6 +70,8 @@ const BlendedBackgroundImage = ({ src, position = "left", theme = "light", contr
         alt="Background" 
         className={`w-full h-full object-cover object-center brightness-90 ${isDark ? 'grayscale opacity-60' : ''} ${contrast ? contrast : (isDark ? 'contrast-125' : 'contrast-150')}`}
         referrerPolicy="no-referrer"
+        loading={priority ? "eager" : "lazy"}
+        fetchPriority={priority ? "high" : "auto"}
       />
       {gradientClasses}
     </motion.div>
@@ -153,7 +155,7 @@ const ExperiencePage = () => {
       <main className="pt-32 md:pt-48 border-x border-white/10 max-w-[1800px] mx-auto min-h-screen">
         {/* Header Section */}
         <header className="relative px-6 md:px-20 pb-24 border-b border-white/10 overflow-hidden bg-[#0A0A0A] text-white">
-          <BlendedBackgroundImage src="https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?q=80&w=1600&auto=format&fit=crop" position="right" theme="dark" />
+          <BlendedBackgroundImage src="https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?q=80&w=1600&auto=format&fit=crop" position="right" theme="dark" priority={true} />
           
           <div className="relative z-10 flex flex-col md:flex-row md:items-end justify-between gap-8">
             <div className="overflow-hidden">
@@ -222,7 +224,7 @@ const ExperiencePage = () => {
           viewport={{ once: true }}
           className="relative grid grid-cols-1 md:grid-cols-12 bg-white text-black overflow-hidden"
         >
-          <BlendedBackgroundImage src="https://images.unsplash.com/photo-1550684848-fac1c5b4e853?auto=format&fit=crop&w=1600&q=80" position="left" />
+          <BlendedBackgroundImage src="https://images.unsplash.com/photo-1550684848-fac1c5b4e853?auto=format&fit=crop&w=1600&q=80" position="left" priority={true} />
           <div className="relative z-10 md:col-span-4 p-6 sm:p-8 md:p-20 border-b md:border-b-0 md:border-r border-black/10">
             <motion.h2 variants={itemVariants} className="font-display text-xs md:text-[10px] font-bold uppercase tracking-[0.5em] opacity-60">01 / Summary</motion.h2>
           </div>
@@ -270,7 +272,7 @@ const ExperiencePage = () => {
           viewport={{ once: true }}
           className="relative grid grid-cols-1 md:grid-cols-12 bg-white text-black border-b border-black/10 overflow-hidden"
         >
-          <BlendedBackgroundImage src="https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?auto=format&fit=crop&w=1600&q=80" position="left" contrast="contrast-125" />
+          <BlendedBackgroundImage src="https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?auto=format&fit=crop&w=1600&q=80" position="left" contrast="contrast-125" priority={true} />
           <div className="relative z-10 md:col-span-4 p-6 sm:p-8 md:p-20 border-b md:border-b-0 md:border-r border-black/10">
             <motion.h2 variants={itemVariants} className="font-display text-xs md:text-[10px] font-bold uppercase tracking-[0.5em] opacity-60">02 / Experience</motion.h2>
           </div>

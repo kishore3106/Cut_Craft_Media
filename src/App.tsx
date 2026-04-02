@@ -5,10 +5,11 @@
 
 import { motion, useScroll, useTransform, AnimatePresence, useSpring, useMotionValue, useInView } from "motion/react";
 import { ArrowUpRight, Github, Linkedin, Mail, Twitter, ExternalLink, X, Volume2, VolumeX } from "lucide-react";
-import { useRef, useEffect, useState, MouseEvent } from "react";
+import { useRef, useEffect, useState, MouseEvent, lazy, Suspense } from "react";
 import { Routes, Route, Link, useLocation } from "react-router-dom";
 import Lenis from "lenis";
-import ExperiencePage from "./ExperiencePage";
+
+const ExperiencePage = lazy(() => import("./ExperiencePage"));
 
 const PROJECTS = [
   {
@@ -53,6 +54,8 @@ const PROJECTS = [
 ];
 
 const COLLECTION_VIDEOS = [
+  { id: "c9", src: "/9c.mp4", title: "Cinematic Showcase", desc: "Professional horizontal video production.", format: "horizontal" },
+  { id: "c8", src: "/8c.mp4", title: "Property Edit", desc: "Professional real estate tours with a cinematic touch.", format: "horizontal" },
   { id: "c1", src: "/1C.mp4", title: "Love & Relationship", desc: "Capturing heartfelt moments and emotional connections." },
   { id: "c2", src: "/2c.mp4", title: "Commercial Jewellery Ad", desc: "Elegant showcases of luxury and craftsmanship." },
   { id: "c3", src: "/3c.mp4", title: "UGC Brand Promotion", desc: "Authentic content that builds trust and engagement." },
@@ -60,7 +63,6 @@ const COLLECTION_VIDEOS = [
   { id: "c5", src: "/5c.mp4", title: "3D Motion Graphics", desc: "Immersive animations that bring concepts to life." },
   { id: "c6", src: "/6c.mp4", title: "Event Promotion", desc: "High-energy teasers for unforgettable experiences.", format: "horizontal" },
   { id: "c7", src: "/7c.mp4", title: "Funny Meme Edit", desc: "Viral-ready humor with perfect comedic timing.", format: "horizontal" },
-  { id: "c8", src: "/8c.mp4", title: "Property Edit", desc: "Professional real estate tours with a cinematic touch.", format: "horizontal" },
 ];
 
 const CustomCursor = () => {
@@ -180,6 +182,7 @@ const Hero = () => {
           alt="Person" 
           className="w-full h-full object-cover object-center md:object-right"
           referrerPolicy="no-referrer"
+          fetchPriority="high"
         />
         
         {/* Blurry Glass / Fade Effect Overlays */}
@@ -241,6 +244,7 @@ const VideoProjectCard = ({ project }: ProjectCardProps) => {
   const isInView = useInView(containerRef, { margin: "-20% 0px" });
   const [isOpen, setIsOpen] = useState(false);
   const [isMuted, setIsMuted] = useState(true);
+  const [isLoaded, setIsLoaded] = useState(false);
 
   const isHorizontal = project.format === "horizontal";
   const aspectClass = isHorizontal ? "aspect-[16/9]" : "aspect-[9/16]";
@@ -279,8 +283,17 @@ const VideoProjectCard = ({ project }: ProjectCardProps) => {
         ref={containerRef}
         style={{ scale, opacity }}
         onClick={() => setIsOpen(true)}
-        className={`group relative cursor-pointer overflow-hidden w-full ${aspectClass} ${isHorizontal ? 'max-h-[75vh]' : ''} bg-zinc-900 rounded-xl`}
+        className={`group relative cursor-pointer overflow-hidden w-full ${aspectClass} ${isHorizontal ? 'max-h-[75vh]' : ''} bg-zinc-900 rounded-xl flex items-center justify-center`}
       >
+        {!isLoaded && (
+          <div className="absolute inset-0 flex items-center justify-center z-20 bg-zinc-900">
+            <motion.div
+              animate={{ rotate: 360 }}
+              transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+              className="w-10 h-10 border-2 border-[#FF4E00] border-t-transparent rounded-full"
+            />
+          </div>
+        )}
         <motion.div style={{ y }} className="absolute inset-0 w-full h-full origin-center">
           <video
             ref={videoRef}
@@ -289,7 +302,8 @@ const VideoProjectCard = ({ project }: ProjectCardProps) => {
             muted={isMuted}
             playsInline
             preload="auto"
-            className="w-full h-full object-cover transition-transform duration-1000 ease-[0.22,1,0.36,1] group-hover:scale-105"
+            onLoadedData={() => setIsLoaded(true)}
+            className={`w-full h-full object-cover transition-all duration-1000 ease-[0.22,1,0.36,1] group-hover:scale-105 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}
           />
         </motion.div>
         <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-700 flex flex-col justify-end p-6 md:p-8 z-10">
@@ -346,7 +360,6 @@ const VideoProjectCard = ({ project }: ProjectCardProps) => {
                     autoPlay
                     loop
                     playsInline
-                    preload="auto"
                     className="w-full h-full object-contain md:object-cover"
                   />
                 </div>
@@ -409,6 +422,7 @@ const ProjectCard = ({ project }: ProjectCardProps) => {
         src={project.image}
         alt={project.title}
         referrerPolicy="no-referrer"
+        loading="lazy"
         className="w-full h-full object-cover transition-transform duration-1000 ease-[0.22,1,0.36,1] group-hover:scale-105"
       />
       <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-700 flex flex-col justify-end p-6 md:p-8">
@@ -430,8 +444,10 @@ const ProjectCard = ({ project }: ProjectCardProps) => {
 const VideoCarousel = () => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isMuted, setIsMuted] = useState(true);
+  const [loadedVideos, setLoadedVideos] = useState<Record<string, boolean>>({});
   const carouselRef = useRef<HTMLDivElement>(null);
   const videoRefs = useRef<(HTMLVideoElement | null)[]>([]);
+  const isInView = useInView(carouselRef, { margin: "-10% 0px" });
 
   const { scrollYProgress } = useScroll({
     target: carouselRef,
@@ -462,6 +478,22 @@ const VideoCarousel = () => {
     return () => unsubscribe();
   }, [currentIndex, isMuted, volumeValue]);
 
+  // Handle video playback based on visibility
+  useEffect(() => {
+    videoRefs.current.forEach((video) => {
+      if (video) {
+        if (isInView) {
+          video.play().catch(() => {
+            // Fallback for browsers that block autoplay
+            console.log("Autoplay blocked or video not ready");
+          });
+        } else {
+          video.pause();
+        }
+      }
+    });
+  }, [isInView]);
+
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
@@ -470,6 +502,10 @@ const VideoCarousel = () => {
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
+
+  const handleVideoLoad = (id: string) => {
+    setLoadedVideos(prev => ({ ...prev, [id]: true }));
+  };
 
   const handleNext = () => {
     setCurrentIndex((prev) => (prev + 1) % COLLECTION_VIDEOS.length);
@@ -515,18 +551,28 @@ const VideoCarousel = () => {
                   duration: 0.8,
                   ease: [0.22, 1, 0.36, 1]
                 }}
-                className="absolute w-[220px] sm:w-[300px] h-[380px] sm:h-[530px] bg-white/5 rounded-2xl overflow-hidden cursor-pointer group shadow-2xl"
+                className="absolute w-[220px] sm:w-[300px] h-[380px] sm:h-[530px] bg-white/5 rounded-2xl overflow-hidden cursor-pointer group shadow-2xl flex items-center justify-center"
                 onClick={() => setCurrentIndex(index)}
               >
+                {!loadedVideos[video.id] && (
+                  <div className="absolute inset-0 flex items-center justify-center z-30 bg-zinc-900">
+                    <motion.div
+                      animate={{ rotate: 360 }}
+                      transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                      className="w-8 h-8 border-2 border-[#FF4E00] border-t-transparent rounded-full"
+                    />
+                  </div>
+                )}
                 <video 
                   ref={(el) => (videoRefs.current[index] = el)}
                   src={video.src} 
-                  autoPlay 
+                  autoPlay
                   muted={!isActive || isMuted} 
                   loop 
                   playsInline 
-                  preload={isActive ? "auto" : "metadata"}
-                  className={`w-full h-full ${video.format === 'horizontal' ? 'object-contain bg-black' : 'object-cover'}`}
+                  preload="auto"
+                  onLoadedData={() => handleVideoLoad(video.id)}
+                  className={`w-full h-full transition-opacity duration-500 ${loadedVideos[video.id] ? 'opacity-100' : 'opacity-0'} ${video.format === 'horizontal' ? 'object-contain bg-black' : 'object-cover'}`}
                 />
                 
                 {/* Mute/Unmute Button */}
@@ -726,6 +772,7 @@ const About = () => {
         alt="Editing Suite" 
         className="w-full h-full object-cover object-center md:object-left contrast-150"
         referrerPolicy="no-referrer"
+        fetchPriority="high"
       />
       
       {/* Blurry Glass / Fade Effect Overlays */}
@@ -814,27 +861,27 @@ const Portfolio = () => (
 const Footer = () => (
   <footer id="contact" className="bg-[#0A0A0A] text-white py-32 px-6 md:px-12">
     <div className="max-w-7xl mx-auto">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-12 md:gap-16 mb-20 md:mb-32">
+      <div className="flex flex-col xl:flex-row justify-between items-start xl:items-end gap-12 xl:gap-16 mb-20 md:mb-32">
         <motion.div
           initial={{ opacity: 0, y: 50 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 1 }}
-          className="max-w-full"
+          className="max-w-full xl:max-w-[50%]"
         >
           <p className="font-display text-xs uppercase tracking-[0.3em] opacity-70 mb-8">Got a project?</p>
-          <h2 className="font-display text-5xl sm:text-7xl md:text-[10rem] lg:text-[12rem] font-black tracking-tighter uppercase leading-[0.75] break-words">
+          <h2 className="font-display text-5xl sm:text-7xl md:text-8xl lg:text-9xl xl:text-[8rem] font-black tracking-tighter uppercase leading-[0.75] break-words">
             Let's talk.
           </h2>
         </motion.div>
-        <div className="flex flex-col items-start md:items-end gap-4">
+        <div className="flex flex-col items-start xl:items-end gap-4 w-full xl:w-auto">
           <motion.a 
             initial={{ opacity: 0 }}
             whileInView={{ opacity: 1 }}
             viewport={{ once: true }}
             transition={{ delay: 0.5, duration: 1 }}
             href="mailto:hellocutcraftmedia@gmail.com" 
-            className="font-display text-xl sm:text-2xl md:text-5xl font-bold border-b-4 md:border-b-8 border-white pb-2 md:pb-4 hover:opacity-50 transition-all duration-500 break-all sm:break-normal"
+            className="font-display text-base sm:text-xl md:text-2xl lg:text-3xl font-bold border-b-2 md:border-b-4 border-white pb-2 md:pb-4 hover:opacity-50 transition-all duration-500 break-all sm:break-normal w-full xl:w-auto text-left xl:text-right"
           >
             hellocutcraftmedia@gmail.com
           </motion.a>
@@ -844,7 +891,7 @@ const Footer = () => (
             viewport={{ once: true }}
             transition={{ delay: 0.6, duration: 1 }}
             href="tel:+918524083106" 
-            className="font-display text-lg sm:text-xl md:text-3xl font-bold opacity-60 hover:opacity-100 transition-all duration-500"
+            className="font-display text-sm sm:text-lg md:text-xl lg:text-2xl font-bold opacity-60 hover:opacity-100 transition-all duration-500 w-full xl:w-auto text-left xl:text-right"
           >
             +91 8524083106
           </motion.a>
@@ -902,8 +949,26 @@ export default function App() {
 
     requestAnimationFrame(raf);
 
+    // Preload all videos as early as possible
+    const videosToPreload = [
+      ...COLLECTION_VIDEOS.map(v => v.src),
+      ...PROJECTS.map(p => p.video).filter(Boolean) as string[]
+    ];
+
+    videosToPreload.forEach(href => {
+      const preloadVideo = document.createElement("link");
+      preloadVideo.rel = "preload";
+      preloadVideo.as = "video";
+      preloadVideo.href = href;
+      document.head.appendChild(preloadVideo);
+    });
+
+    // Preload ExperiencePage
+    const preloadExperience = () => import("./ExperiencePage");
+    preloadExperience();
+
     // Simulate loading
-    const timer = setTimeout(() => setIsLoading(false), 1500);
+    const timer = setTimeout(() => setIsLoading(false), 2000);
     return () => {
       lenis.destroy();
       lenisRef.current = null;
@@ -935,10 +1000,16 @@ export default function App() {
       </AnimatePresence>
 
       <CustomCursor />
-      <Routes>
-        <Route path="/" element={<Portfolio />} />
-        <Route path="/experience" element={<ExperiencePage />} />
-      </Routes>
+      <Suspense fallback={
+        <div className="fixed inset-0 bg-[#0A0A0A] flex items-center justify-center">
+          <div className="w-12 h-12 border-4 border-white/20 border-t-white rounded-full animate-spin" />
+        </div>
+      }>
+        <Routes>
+          <Route path="/" element={<Portfolio />} />
+          <Route path="/experience" element={<ExperiencePage />} />
+        </Routes>
+      </Suspense>
     </main>
   );
 }
